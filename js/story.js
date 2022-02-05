@@ -1,1 +1,1 @@
-var storyContent = {"inkVersion":20,"root":[["^Hello, world!","\n",["done",{"#n":"g-0"}],null],"done",null],"listDefs":{}}
+var storyContent = {"inkVersion":20,"root":[["^It is the Age of Discovery.","\n","^Since a very young age you wanted to make maps.","\n","^Beautiful drawings of the world.","\n","^Finding places, connecting ports, navigating the dangers of the unknown.","\n","^All those souls that where lost on Sea.","\n","^Maybe we could have saved them with better maps!","\n",["done",{"#n":"g-0"}],null],"done",null],"listDefs":{}}

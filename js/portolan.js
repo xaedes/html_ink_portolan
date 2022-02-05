@@ -10,6 +10,8 @@ function Game(storyContent)
     this.storyContent = storyContent;
     this.story = new inkjs.Story(this.storyContent);
 
+    this.world = new World();
+
     this.showAfter = function(delay, element)
     {
         setTimeout(function() { element.classList.add("show") }, delay);
@@ -94,4 +96,17 @@ function Game(storyContent)
 
         game.scrollToBottom();
     }
+}
+function World()
+{
+    this.params = {
+        
+    };
+    this.islands = [];
+    
+}var game = null;
+function main()
+{
+    game = new Game(storyContent);
+    game.continueStory();
 }
