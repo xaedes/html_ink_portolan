@@ -1,4 +1,4 @@
-# html_ink_template
-Html + Ink.js template with Makefile
+# html_ink_portolan
 
-Web Link: https://xaedes.github.io/html_ink_template/
+
+Web Link: https://xaedes.github.io/html_ink_portolan/
