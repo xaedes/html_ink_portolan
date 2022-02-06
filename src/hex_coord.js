@@ -9,7 +9,7 @@ function HexCoord(interval, u, v)
         let lineHeight = Math.sqrt(3) / 2.0;
         let y = this.interval * this.v * lineHeight;
         let x = this.interval * this.u;
-        if (this.u % 2 == 1) x += 0.5;
+        if (this.v % 2 == 1) x += this.interval * 0.5;
         return new Position(x,y);
     };
 }
