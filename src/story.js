@@ -91,6 +91,7 @@ function StoryRenderer(data)
                 this.data.paragraphs[i].renderer.update(this.dom);
             }
         }
+        this.data.paragraphs = this.data.paragraphs.filter(paragraph => !paragraph.remove);
         for (let i = 0; i < this.data.choices.length; i++)
         {
             if (this.data.choices[i].remove === true)
@@ -102,6 +103,7 @@ function StoryRenderer(data)
                 this.data.choices[i].renderer.update(this.dom);
             }
         }
+        this.data.choices = this.data.choices.filter(choice => !choice.remove);
 
     };
     this.exit = function(parent = null)
