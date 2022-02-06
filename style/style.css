@@ -60,5 +60,5 @@ svg {
 
 .game_location.island
 {
-    fill: gray;
+    fill: rgb(0,0,0,0.05);
 }
