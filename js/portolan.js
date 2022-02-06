@@ -1,110 +1,19 @@
 var game = null;
+var utils = null;
 function main()
 {
+    utils = new Utils();
     game = new Game(storyContent);
-    game.continueStory();
     game.renderer.update(d3.select("#game"));
+    game.story.continueStory();
 }
 function Game(storyContent) 
 {
-    this.params = {
-        delay: {
-            paragraph: 100.0,
-            choice: 100.0
-        }
-    };
-    this.renderer = new GameRenderer(this);
-    this.storyContainer = document.querySelectorAll('#story')[0];
-    this.storyContent = storyContent;
-    this.story = new inkjs.Story(this.storyContent);
-
+    this.story = new Story(storyContent);
     this.world = new World();
     this.world.generate(75,100,10,10,20);
 
-    this.showAfter = function(delay, element)
-    {
-        setTimeout(function() { element.classList.add("show") }, delay);
-    };
-
-    this.scrollToBottom = function()
-    {
-        let game = this;
-        var progress = 0.0;
-        var start = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-        var dist = document.body.scrollHeight - window.innerHeight - start;
-        if( dist < 0 ) return;
-
-        var duration = 300 + 300*dist/100;
-        var startTime = null;
-        function step(time) {
-            if( startTime == null ) startTime = time;
-            var t = (time-startTime) / duration;
-            var lerp = 3*t*t - 2*t*t*t;
-            window.scrollTo(0, start + lerp*dist);
-            if( t < 1 ) requestAnimationFrame(step);
-        }
-        requestAnimationFrame(step);
-    };
-    this.continueStory = function() 
-    {
-        let game = this;
-        var paragraphIndex = 0;
-        var delay = 0.0;
-
-        // Generate story text - loop through available content
-        while(game.story.canContinue) {
-
-            // Get ink to generate the next paragraph
-            var paragraphText = game.story.Continue();
-
-            // Create paragraph element
-            var paragraphElement = document.createElement('p');
-            paragraphElement.innerHTML = paragraphText;
-            game.storyContainer.appendChild(paragraphElement);
-
-            // Fade in paragraph after a short delay
-            game.showAfter(delay, paragraphElement);
-
-            delay += game.params.delay.paragraph;
-        }
-
-        // Create HTML choices from ink choices
-        game.story.currentChoices.forEach(function(choice) {
-
-            // Create paragraph with anchor element
-            var choiceParagraphElement = document.createElement('p');
-            choiceParagraphElement.classList.add("choice");
-            choiceParagraphElement.innerHTML = `<a href='#'>${choice.text}</a>`
-            game.storyContainer.appendChild(choiceParagraphElement);
-
-            // Fade choice in after a short delay
-            game.showAfter(delay, choiceParagraphElement);
-            delay += game.params.delay.choice;
-
-            // Click on choice
-            var choiceAnchorEl = choiceParagraphElement.querySelectorAll("a")[0];
-            choiceAnchorEl.addEventListener("click", function(event) {
-
-                // Don't follow <a> link
-                event.preventDefault();
-
-                // Remove all existing choices
-                var existingChoices = game.storyContainer.querySelectorAll('p.choice');
-                for(var i=0; i<existingChoices.length; i++) {
-                    var c = existingChoices[i];
-                    c.parentNode.removeChild(c);
-                }
-
-                // Tell the story where to go next
-                game.story.ChooseChoiceIndex(choice.index);
-
-                // Aaand loop
-                game.continueStory();
-            });
-        });
-
-        game.scrollToBottom();
-    };
+    this.renderer = new GameRenderer(this);
 }
 function GameRenderer(data)
 {
@@ -129,22 +38,26 @@ function GameRenderer(data)
         // let cam = svg;
 
         this.dom.graphics = cam;
+        this.dom.story = this.parent.append("div");
     };
     this.update = function(parent = null)
     {
         if (this.parent === null) this.parent = parent;
-        if (this.dom === null) this.enter(parent);
+        if (this.dom === null) this.enter(this.parent);
 
         this.data.world.renderer.update(this.dom.graphics);
+        this.data.story.renderer.update(this.dom.story);
     };
     this.exit = function(parent = null)
     {
         if (this.parent === null) this.parent = parent;
         
         this.data.world.renderer.exit(this.dom.graphics);
+        this.data.story.renderer.exit(this.dom.story);
         
         if (this.dom != null) {
             this.dom.graphics.remove();
+            this.dom.story.remove();
         }
         this.parent = null;
         this.dom = null;
@@ -211,7 +124,7 @@ function WorldRenderer(data)
     this.update = function(parent = null)
     {
         if (this.parent === null) this.parent = parent;
-        if (this.dom === null) this.enter(parent);
+        if (this.dom === null) this.enter(this.parent);
 
         for (let i = 0; i < this.data.islands.length; i++)
         {
@@ -258,7 +171,7 @@ function GameLocationRenderer(data)
     this.update = function(parent = null)
     {
         if (this.parent === null) this.parent = parent;
-        if (this.dom === null) this.enter(parent);
+        if (this.dom === null) this.enter(this.parent);
 
         this.dom.attr("cx", this.data.position.x);
         this.dom.attr("cy", this.data.position.y);
@@ -348,4 +261,268 @@ function HexCoord(interval, u, v)
     };
 
     this.clear();
+}function Story(storyContent)
+{
+    this.storyContent = storyContent;
+
+    this.params = {
+        delay: {
+            paragraph: 100.0,
+            choice: 100.0
+        }
+    };
+    this.inkStory = new inkjs.Story(this.storyContent);
+
+    this.paragraphs = [];
+    this.choices = [];
+    
+
+    // this.storyContainer = document.querySelectorAll('#story')[0];
+    this.renderer = new StoryRenderer(this);
+
+    this.chooseIndex = function(index)
+    {
+        // todo: remove existing choices
+        for (let i = 0; i < this.choices.length; i++)
+        {
+            this.choices[i].remove = true;
+        }
+        this.inkStory.ChooseChoiceIndex(index);
+        this.renderer.update();
+    };
+
+    this.continueStory = function() 
+    {
+        var paragraphIndex = 0;
+        var delay = 0.0;
+
+        // Generate story text, loop through available content
+        while(this.inkStory.canContinue) {
+
+            // Get ink to generate the next paragraph
+            var paragraphText = this.inkStory.Continue();
+
+            let storyParagraph = new StoryParagraph(paragraphText, delay);
+            this.paragraphs.push(storyParagraph);
+
+            delay += this.params.delay.paragraph;
+        }
+
+        // Create HTML choices from ink choices
+        let story = this;
+        this.inkStory.currentChoices.forEach(function(choice) {
+            let storyChoice = new StoryChoice(story, choice.text, choice.index, delay);
+            story.choices.push(storyChoice);
+
+            delay += story.params.delay.choice;
+
+        });
+        this.renderer.update();
+        utils.scrollToBottom();
+    };    
+}
+function StoryRenderer(data)
+{
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+
+        this.dom = this.parent.append("div");
+        this.dom.attr("id", "story");
+        this.dom.attr("class", "container");
+        // this.dom.append("h1")
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(this.parent);
+        
+
+        for (let i = 0; i < this.data.paragraphs.length; i++)
+        {
+            if (this.data.paragraphs[i].remove === true)
+            {
+                this.data.paragraphs[i].renderer.exit(this.dom);
+            }
+            else
+            {
+                this.data.paragraphs[i].renderer.update(this.dom);
+            }
+        }
+        for (let i = 0; i < this.data.choices.length; i++)
+        {
+            if (this.data.choices[i].remove === true)
+            {
+                this.data.choices[i].renderer.exit(this.dom);
+            }
+            else
+            {
+                this.data.choices[i].renderer.update(this.dom);
+            }
+        }
+
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+
+        for (let i = 0; i < this.data.paragraphs.length; i++)
+        {
+            this.data.paragraphs[i].renderer.exit(this.dom);
+        }
+
+        for (let i = 0; i < this.data.choices.length; i++)
+        {
+            this.data.choices[i].renderer.exit(this.dom);
+        }
+
+        if (this.dom != null) {
+            this.dom.remove();
+        }
+
+        this.parent = null;
+        this.dom = null;
+    };
+}
+function StoryChoice(story, text, index, delay)
+{
+    this.story = story;
+    this.text = text;
+    this.index = index;
+    this.delay = delay;
+    this.remove = false;
+    this.renderer = new StoryChoiceRenderer(this);
+}
+function StoryChoiceRenderer(data)
+{
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+        let choice = this.data;
+        this.dom = {
+            paragraph: null,
+            link: null,
+        };
+
+        this.dom.paragraph = (
+            this.parent
+            .append("p")
+            .attr("class", "choice")
+        );
+        this.dom.link = (
+            this.dom.paragraph
+            .append("a")
+            .attr("href", "#")
+            .html(this.data.text)
+            .on("click", function(e){
+                e.preventDefault();
+                choice.story.chooseIndex(choice.index);
+                choice.story.continueStory();
+            })
+        );
+        utils.showAfter(this.data.delay, this.dom.paragraph);
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(this.parent);
+
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) {
+            this.dom.link.remove();
+            this.dom.paragraph.remove();
+        }
+
+        this.parent = null;
+        this.dom = null;
+    };
+}function StoryParagraph(text, delay)
+{
+    this.text = text;
+    this.delay = delay;
+    this.remove = false;
+    this.renderer = new StoryParagraphRenderer(this);
+}
+function StoryParagraphRenderer(data)
+{
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+
+        this.dom = this.parent.append("p");
+        this.dom.html(this.data.text);
+        utils.showAfter(this.data.delay, this.dom);
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(this.parent);
+
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+
+        if (this.dom != null) {
+            this.dom.remove();
+        }
+        this.parent = null;
+        this.dom = null;
+    };
+}
+function Utils()
+{
+    this.showAfter = function(delay, element)
+    {
+        // element.transition().duration(delay).attr("class")
+        setTimeout(
+            function() { 
+                element.each(
+                    function(d) {
+                        this.classList.add("show")
+                    }
+                );
+            }, 
+            delay
+        );
+        // setTimeout(function() { element.classList.add("show") }, delay);
+    };
+
+    this.scrollToBottom = function()
+    {
+        let game = this;
+        var progress = 0.0;
+        var start = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        var dist = document.body.scrollHeight - window.innerHeight - start;
+        if( dist < 0 ) return;
+
+        var duration = 300 + 300*dist/100;
+        var startTime = null;
+        function step(time) {
+            if( startTime == null ) startTime = time;
+            var t = (time-startTime) / duration;
+            var lerp = 3*t*t - 2*t*t*t;
+            window.scrollTo(0, start + lerp*dist);
+            if( t < 1 ) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    };
 }

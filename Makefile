@@ -1,22 +1,26 @@
 
-.PHONY : all
-all : js/story.js js/portolan.js
-
-JS_FILES = main.js game.js world.js game_location.js position.js hex_coord.js array_2d.js
+JS_FILES = main.js game.js world.js game_location.js position.js hex_coord.js array_2d.js story.js story_choice.js story_paragraph.js utils.js
 JS_FILEPATHS = $(addprefix src/,$(JS_FILES))
+ALL_TARGET_FILES = js/story_content.js js/portolan.js js/story_content.json
+
+.PHONY : all
+all : $(ALL_TARGET_FILES)
+
+clean: 
+	rm $(ALL_TARGET_FILES)
 
 js/portolan.js: ${JS_FILEPATHS}
 	cat ${JS_FILEPATHS} > js/portolan.js
 
 
-js/story.js: src/story_template.js js/story.json
-	cat src/story_template.js > js/story.js
-	cat js/story.json >> js/story.js
+js/story_content.js: src/story_content_template.js js/story_content.json
+	cat src/story_content_template.js > js/story_content.js
+	cat js/story_content.json >> js/story_content.js
 
-js/story.json: story/main.ink tools/inklecate
-	tools/inklecate -j -o js/story_with_bom.json story/main.ink
-	iconv -f utf-8 -t utf-16le js/story_with_bom.json | iconv -f utf-16 -t utf-8 > js/story.json
-	rm js/story_with_bom.json
+js/story_content.json: story/main.ink tools/inklecate
+	tools/inklecate -j -o js/story_content_with_bom.json story/main.ink
+	iconv -f utf-8 -t utf-16le js/story_content_with_bom.json | iconv -f utf-16 -t utf-8 > js/story_content.json
+	rm js/story_content_with_bom.json
 
 tools/inklecate: tools/inklecate_linux.zip
 	cd tools && unzip inklecate_linux.zip && touch inklecate

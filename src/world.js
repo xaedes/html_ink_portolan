@@ -59,7 +59,7 @@ function WorldRenderer(data)
     this.update = function(parent = null)
     {
         if (this.parent === null) this.parent = parent;
-        if (this.dom === null) this.enter(parent);
+        if (this.dom === null) this.enter(this.parent);
 
         for (let i = 0; i < this.data.islands.length; i++)
         {
