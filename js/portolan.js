@@ -1,3 +1,10 @@
+var game = null;
+function main()
+{
+    game = new Game(storyContent);
+    game.continueStory();
+    game.renderer.update(d3.select("#game"));
+}
 function Game(storyContent) 
 {
     this.params = {
@@ -6,11 +13,13 @@ function Game(storyContent)
             choice: 100.0
         }
     };
+    this.renderer = new GameRenderer(this);
     this.storyContainer = document.querySelectorAll('#story')[0];
     this.storyContent = storyContent;
     this.story = new inkjs.Story(this.storyContent);
 
     this.world = new World();
+    this.world.generate(75,100,10,10,20);
 
     this.showAfter = function(delay, element)
     {
@@ -95,18 +104,248 @@ function Game(storyContent)
         });
 
         game.scrollToBottom();
-    }
+    };
+}
+function GameRenderer(data)
+{
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+        this.dom = {
+            graphics: null,
+            story: null,
+        };
+        let svg = this.parent.append("svg");
+        let cam = svg.append("g").attr("class", "cam");
+        const zoom = d3.zoom().on("zoom", e=>{
+            cam.attr("transform", (transform = e.transform))
+        });
+        svg.call(zoom);
+        // let cam = svg;
+
+        this.dom.graphics = cam;
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(parent);
+
+        this.data.world.renderer.update(this.dom.graphics);
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        
+        this.data.world.renderer.exit(this.dom.graphics);
+        
+        if (this.dom != null) {
+            this.dom.graphics.remove();
+        }
+        this.parent = null;
+        this.dom = null;
+    };
 }
 function World()
 {
     this.params = {
-        
+
     };
+    this.renderer = new WorldRenderer(this);
     this.islands = [];
-    
-}var game = null;
-function main()
+
+    this.generate = function(numIslands, interval, width, height, randomInterval)
+    {
+        let arr = new Array2d(width,height);
+        for (let y = 0; y < arr.height; ++y)
+        {
+            for (let x = 0; x < arr.width; ++x)
+            {
+                arr.set(x,y,{
+                    count: 0,
+                });
+            }
+        }
+        let count = 0;
+        numIslands = Math.min(numIslands, arr.width * arr.height);
+        let kind = "island";
+        while (count < numIslands)
+        {
+            let rx = Math.floor(Math.random() * arr.width);
+            let ry = Math.floor(Math.random() * arr.height);
+            let item = arr.get(rx,ry);
+            if (item.count == 0)
+            {
+                item.count++;
+                count++;
+                let hexCoord = new HexCoord(interval, rx, ry);
+                let randomOffset = new Position(
+                    (Math.random()*2-1) * randomInterval,
+                    (Math.random()*2-1) * randomInterval
+                );
+                let position = hexCoord.toPosition().add(randomOffset);
+                let island = new GameLocation(position,kind);
+                this.islands.push(island);
+            }
+        }
+
+    };
+}
+function WorldRenderer(data)
 {
-    game = new Game(storyContent);
-    game.continueStory();
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+
+        this.dom = this.parent.append("g");
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(parent);
+
+        for (let i = 0; i < this.data.islands.length; i++)
+        {
+            this.data.islands[i].renderer.update(this.dom);
+        }
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        
+        for (let i = 0; i < this.data.islands.length; i++)
+        {
+            this.data.islands[i].renderer.exit(this.dom);
+        }
+
+        if (this.dom != null) {
+            this.dom.remove();
+        }
+        this.parent = null;
+        this.dom = null;
+    };
+}
+function GameLocation(position, kind)
+{
+    this.position = position;
+    this.kind = kind;
+    this.renderer = new GameLocationRenderer(this);
+}
+function GameLocationRenderer(data)
+{
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+
+        this.dom = this.parent.append("circle");
+        this.dom.attr("r", 20);
+        this.dom.attr("class", "game_location " + this.data.kind);
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(parent);
+
+        this.dom.attr("cx", this.data.position.x);
+        this.dom.attr("cy", this.data.position.y);
+
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) {
+            this.dom.remove();
+        }
+        
+
+        this.parent = null;
+        this.dom = null;
+    };
+}
+function Position(x, y)
+{
+    this.x = x;
+    this.y = y;
+
+    this.add = function(rhs)
+    {
+        this.x += rhs.x;
+        this.y += rhs.y;
+        return this;
+    }
+    this.subtract = function(rhs)
+    {
+        this.x -= rhs.x;
+        this.y -= rhs.y;
+        return this;
+    }
+}
+Position.Add = function(a, b)
+{
+    return new Position(a.x, a.y).add(b);
+};
+Position.Subtract = function(a, b)
+{
+    return new Position(a.x, a.y).subtract(b);
+};
+function HexCoord(interval, u, v)
+{
+    this.interval = interval;
+    this.u = Math.round(u);
+    this.v = Math.round(v);
+
+    this.toPosition = function()
+    {
+        let lineHeight = Math.sqrt(3) / 2.0;
+        let y = this.interval * this.v * lineHeight;
+        let x = this.interval * this.u;
+        if (this.u % 2 == 1) x += 0.5;
+        return new Position(x,y);
+    };
+}function Array2d(width=0, height=0)
+{
+    this.width = width;
+    this.height = height;
+    this.data = [];
+
+    this.clear = function()
+    {
+        this.data = [];
+        for (let y = 0; y < height; y++)
+        {
+            let row = [];
+            for (let x = 0; x < width; x++)
+            {
+                row.push(null);
+            }
+            this.data.push(row);
+        }
+    };
+
+    this.get = function(x,y)
+    {
+        return this.data[y][x];
+    };
+
+    this.set = function(x,y,v)
+    {
+        this.data[y][x] = v;
+        return this.data[y][x];
+    };
+
+    this.clear();
 }

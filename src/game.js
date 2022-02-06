@@ -6,11 +6,13 @@ function Game(storyContent)
             choice: 100.0
         }
     };
+    this.renderer = new GameRenderer(this);
     this.storyContainer = document.querySelectorAll('#story')[0];
     this.storyContent = storyContent;
     this.story = new inkjs.Story(this.storyContent);
 
     this.world = new World();
+    this.world.generate(75,100,10,10,20);
 
     this.showAfter = function(delay, element)
     {
@@ -95,5 +97,49 @@ function Game(storyContent)
         });
 
         game.scrollToBottom();
-    }
+    };
+}
+function GameRenderer(data)
+{
+    this.data = data;
+    this.parent = null;
+    this.dom = null;
+
+    this.enter = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom != null) this.exit(this.parent);
+        this.dom = {
+            graphics: null,
+            story: null,
+        };
+        let svg = this.parent.append("svg");
+        let cam = svg.append("g").attr("class", "cam");
+        const zoom = d3.zoom().on("zoom", e=>{
+            cam.attr("transform", (transform = e.transform))
+        });
+        svg.call(zoom);
+        // let cam = svg;
+
+        this.dom.graphics = cam;
+    };
+    this.update = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        if (this.dom === null) this.enter(parent);
+
+        this.data.world.renderer.update(this.dom.graphics);
+    };
+    this.exit = function(parent = null)
+    {
+        if (this.parent === null) this.parent = parent;
+        
+        this.data.world.renderer.exit(this.dom.graphics);
+        
+        if (this.dom != null) {
+            this.dom.graphics.remove();
+        }
+        this.parent = null;
+        this.dom = null;
+    };
 }

@@ -2,7 +2,7 @@
 .PHONY : all
 all : js/story.js js/portolan.js
 
-JS_FILES = game.js world.js main.js
+JS_FILES = main.js game.js world.js game_location.js position.js hex_coord.js array_2d.js
 JS_FILEPATHS = $(addprefix src/,$(JS_FILES))
 
 js/portolan.js: ${JS_FILEPATHS}

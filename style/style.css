@@ -3,12 +3,20 @@ body {
     font-weight: lighter;
 }
 
+html, body, svg {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
 h1 {
     text-align: center;
     font-weight: lighter;
 }
 
 .container {
+    position:  relative;
+
     display: block;
     max-width: 600px;
     margin: 0 auto;
@@ -36,4 +44,21 @@ p.choice {
 
 a:hover {
     color: black;
+}
+
+svg {
+    position:  absolute;
+    left: 0px;
+    top: 0px;
+    display: block;
+/*    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;  */      
+    /*z-index: -1;   */
+}
+
+.game_location.island
+{
+    fill: gray;
 }
