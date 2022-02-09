@@ -11,7 +11,7 @@ function Game(storyContent)
 {
     this.story = new Story(storyContent);
     this.world = new World();
-    this.world.generate(75,100,10,10,20);
+    this.world.generate(75,200,10,10,40,15,30);
 
     this.player = new Player(this.world);
 
@@ -107,7 +107,7 @@ function World()
         return visible;
     };
 
-    this.generate = function(numIslands, interval, width, height, randomInterval)
+    this.generate = function(numIslands, interval, width, height, randomInterval, minIslandSize, maxIslandSize)
     {
         let arr = new Array2d(width,height);
         for (let y = 0; y < arr.height; ++y)
@@ -145,7 +145,7 @@ function World()
                     seed = utils.randomUniformInt(0, 1024*1024);
                 }
                 used_seeds.add(seed);
-                let size = 20;
+                let size = utils.randomUniform(minIslandSize, maxIslandSize);
                 let island = new GameLocation(position,size,kind,seed);
                 this.islands.push(island);
             }

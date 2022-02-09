@@ -2,7 +2,7 @@ function Game(storyContent)
 {
     this.story = new Story(storyContent);
     this.world = new World();
-    this.world.generate(75,100,10,10,20);
+    this.world.generate(75,200,10,10,40,15,30);
 
     this.player = new Player(this.world);
 
