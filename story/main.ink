@@ -1,3 +1,4 @@
+INCLUDE functions.ink
 
 //-> GameLoop
 -> Prolog
@@ -15,7 +16,6 @@ Maybe they could have avoided their fate, if only they knew...
 + [Continue] 
 -> MainMenu
 
- 
 === MainMenu ===
 
 <h1>Portolan</h1>
@@ -48,7 +48,10 @@ On your way to the destination nothing particularly interesting happened.
 
 === Island(->goback) ===
 
+~ temp bearing = RANDOM(0,359)
+
 An island.
+You see another island at {print_num(bearing)} degree.
 
 -> goback
 
