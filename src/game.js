@@ -4,6 +4,14 @@ function Game(storyContent)
     this.world = new World();
     this.world.generate(75,100,10,10,20);
 
+    this.player = new Player(this.world);
+
+    let start_island_idx = utils.randomUniformInt(0, this.world.islands.length);
+    let start_island = this.world.islands[start_island_idx];
+
+    this.player.position = start_island.getRandomPosition();
+    this.player.inLocations = this.world.getLocationsOfPosition(this.player.position);
+
     this.renderer = new GameRenderer(this);
 }
 function GameRenderer(data)
@@ -38,6 +46,7 @@ function GameRenderer(data)
 
         this.data.world.renderer.update(this.dom.graphics);
         this.data.story.renderer.update(this.dom.story);
+        this.data.player.renderer.update(this.dom.graphics);
     };
     this.exit = function(parent = null)
     {

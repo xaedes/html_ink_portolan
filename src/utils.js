@@ -35,4 +35,13 @@ function Utils()
         }
         requestAnimationFrame(step);
     };
+
+    this.randomUniform = function(min, max)
+    {
+        return min + (max - min) * Math.random();
+    }
+    this.randomUniformInt = function(min, max)
+    {
+        return Math.floor(this.randomUniform(min, max));
+    }
 }

@@ -15,6 +15,10 @@ function Position(x, y)
         this.y -= rhs.y;
         return this;
     }
+    this.length = function()
+    {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
 }
 Position.Add = function(a, b)
 {

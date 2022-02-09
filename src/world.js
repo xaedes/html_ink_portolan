@@ -6,6 +6,33 @@ function World()
     this.renderer = new WorldRenderer(this);
     this.islands = [];
 
+    this.getLocationsOfPosition = function(position)
+    {
+        result = [];
+        for (let i = 0; i < this.islands.length; i++)
+        {
+            if (this.islands[i].isPositionInside(position))
+            {
+                result.push(this.islands[i]);
+            }
+        }
+        return result;
+    }
+
+    this.getVisibleFrom = function(position, max_distance)
+    {
+        visible = [];
+        for (let i = 0; i < this.islands.length; i++)
+        {
+            let view_distance = this.islands[i].getViewFrom(position);
+            if (view_distance < max_distance)
+            {
+                visible.push(this.islands[i]);
+            }
+        }
+        return visible;
+    };
+
     this.generate = function(numIslands, interval, width, height, randomInterval)
     {
         let arr = new Array2d(width,height);
@@ -21,10 +48,12 @@ function World()
         let count = 0;
         numIslands = Math.min(numIslands, arr.width * arr.height);
         let kind = "island";
+
+        let used_seeds = new Set();
         while (count < numIslands)
         {
-            let rx = Math.floor(Math.random() * arr.width);
-            let ry = Math.floor(Math.random() * arr.height);
+            let rx = utils.randomUniformInt(0, arr.width);
+            let ry = utils.randomUniformInt(0, arr.height);
             let item = arr.get(rx,ry);
             if (item.count == 0)
             {
@@ -32,15 +61,21 @@ function World()
                 count++;
                 let hexCoord = new HexCoord(interval, rx, ry);
                 let randomOffset = new Position(
-                    (Math.random()*2-1) * randomInterval,
-                    (Math.random()*2-1) * randomInterval
+                    utils.randomUniform(-randomInterval, +randomInterval),
+                    utils.randomUniform(-randomInterval, +randomInterval)
                 );
                 let position = hexCoord.toPosition().add(randomOffset);
-                let island = new GameLocation(position,kind);
+                let seed = utils.randomUniformInt(0, 1024*1024);
+                while (used_seeds.has(seed))
+                {
+                    seed = utils.randomUniformInt(0, 1024*1024);
+                }
+                used_seeds.add(seed);
+                let size = 20;
+                let island = new GameLocation(position,size,kind,seed);
                 this.islands.push(island);
             }
         }
-
     };
 }
 function WorldRenderer(data)
