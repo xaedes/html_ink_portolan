@@ -10,3 +10,8 @@ Maybe we could have saved them with better maps!
 
 
 Web Link: https://xaedes.github.io/html_ink_portolan/
+
+
+External asset sources:
+
+- https://game-icons.net/1x1/delapouite/pikeman.html

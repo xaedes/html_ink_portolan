@@ -18,10 +18,16 @@ function Utils()
 
     this.scrollToBottom = function()
     {
+        let scrollBox = d3.select("#story");
+        let firstP = scrollBox.select("p:first-of-type");
+        let lastP = scrollBox.select("p:last-of-type");
+
         let game = this;
         var progress = 0.0;
-        var start = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-        var dist = document.body.scrollHeight - window.innerHeight - start;
+        var start = scrollBox.node().scrollTop;
+        // var start = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        var dist = lastP.node().offsetTop - firstP.node().offsetTop - start;
+        // var dist = document.body.scrollHeight - window.innerHeight - start;
         if( dist < 0 ) return;
 
         var duration = 300 + 300*dist/100;
@@ -30,7 +36,8 @@ function Utils()
             if( startTime == null ) startTime = time;
             var t = (time-startTime) / duration;
             var lerp = 3*t*t - 2*t*t*t;
-            window.scrollTo(0, start + lerp*dist);
+            scrollBox.node().scrollTo(0, start + lerp*dist);
+            // scrollBox.node()
             if( t < 1 ) requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
