@@ -1,7 +1,29 @@
 
-JS_FILES = main.js game.js world.js game_location.js position.js hex_coord.js array_2d.js story.js story_choice.js story_paragraph.js player.js utils.js
+BUILD_JS_FILE = portolan.js
+BUILD_STORY_JS_FILE = story_content.js
+BUILD_STORY_JSON_FILE = story_content.json
+STORY_JS_TEMPLATE_FILE = story_content_template.js
+
+JS_FILES = \
+	main.js game.js world.js game_location.js position.js \
+	hex_coord.js array_2d.js story.js story_choice.js \
+	story_paragraph.js player.js utils.js
+
+MAIN_STORY_FILE = main.ink
+STORY_FILES = $(MAIN_STORY_FILE)
+
+BUILD_JS_FILEPATH = $(addprefix js/,$(BUILD_JS_FILE))
+BUILD_STORY_JS_FILEPATH = $(addprefix js/,$(BUILD_STORY_JS_FILE))
+BUILD_STORY_JSON_FILEPATH = $(addprefix js/,$(BUILD_STORY_JSON_FILE))
+
+STORY_JS_TEMPLATE_FILEPATH = $(addprefix src/,$(STORY_JS_TEMPLATE_FILE))
 JS_FILEPATHS = $(addprefix src/,$(JS_FILES))
-ALL_TARGET_FILES = js/story_content.js js/portolan.js js/story_content.json
+
+MAIN_STORY_FILEPATH = $(addprefix story/,$(MAIN_STORY_FILE))
+STORY_FILEPATHS = $(addprefix story/,$(STORY_FILES))
+
+ALL_TARGET_FILES = $(BUILD_JS_FILEPATH) $(BUILD_STORY_JS_FILEPATH)  $(BUILD_STORY_JSON_FILEPATH) 
+
 
 .PHONY : all
 all : $(ALL_TARGET_FILES)
@@ -9,17 +31,16 @@ all : $(ALL_TARGET_FILES)
 clean: 
 	rm $(ALL_TARGET_FILES)
 
-js/portolan.js: ${JS_FILEPATHS}
-	cat ${JS_FILEPATHS} > js/portolan.js
+$(BUILD_JS_FILEPATH): ${JS_FILEPATHS}
+	cat ${JS_FILEPATHS} > $(BUILD_JS_FILEPATH)
 
+$(BUILD_STORY_JS_FILEPATH):  $(BUILD_STORY_JSON_FILEPATH)
+	cat $(STORY_JS_TEMPLATE_FILEPATH) > $(BUILD_STORY_JS_FILEPATH)
+	cat $(BUILD_STORY_JSON_FILEPATH) >> $(BUILD_STORY_JS_FILEPATH)
 
-js/story_content.js: src/story_content_template.js js/story_content.json
-	cat src/story_content_template.js > js/story_content.js
-	cat js/story_content.json >> js/story_content.js
-
-js/story_content.json: story/main.ink tools/inklecate
-	tools/inklecate -j -o js/story_content_with_bom.json story/main.ink
-	iconv -f utf-8 -t utf-16le js/story_content_with_bom.json | iconv -f utf-16 -t utf-8 > js/story_content.json
+$(BUILD_STORY_JSON_FILEPATH): $(STORY_FILEPATHS) tools/inklecate
+	tools/inklecate -j -o js/story_content_with_bom.json $(MAIN_STORY_FILEPATH)
+	iconv -f utf-8 -t utf-16le js/story_content_with_bom.json | iconv -f utf-16 -t utf-8 > $(BUILD_STORY_JSON_FILEPATH)
 	rm js/story_content_with_bom.json
 
 tools/inklecate: tools/inklecate_linux.zip
