@@ -7,3 +7,12 @@ Story of a rich guy that wants to discover new places.
 
 https://www.sacred-texts.com/earth/jce/jce34.htm
 Wind steady, N.W. The raft makes rapid way in a direct line. Coast thirty leagues to leeward. Nothing in sight before us. Intensity of light the same. Weather fine; that is to say, that the clouds are flying high, are light, and bathed in a white atmosphere resembling silver in a state of fusion. Therm. 89° Fahr.
+
+
+https://watabou.github.io/city-generator/
+https://azgaar.github.io/Fantasy-Map-Generator/
+
+I also like the series "Here Dragons Abound" a lot. It touches many different aspects of procedurally generating maps. Over a few blog posts each, he is working out things like how to generate trees or mountains, city symbols or map borders. Currently he's working on compasses:
+https://heredragonsabound.blogspot.com/
+
+https://www.cartographersguild.com/content.php
