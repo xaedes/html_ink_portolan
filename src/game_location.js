@@ -61,6 +61,7 @@ function GameLocationRenderer(data)
         this.turbulence = (
             this.filter
             .append("feTurbulence")
+            // https://drafts.fxtf.org/filter-effects/#feTurbulenceElement
             .attr("type", "turbulence")
             .attr("baseFrequency", 0.05)
             .attr("numOctaves", 2)
