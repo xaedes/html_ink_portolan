@@ -1,4 +1,5 @@
 INCLUDE functions.ink
+INCLUDE external_functions.ink
 
 //-> GameLoop
 -> Prolog

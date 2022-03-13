@@ -7,7 +7,8 @@ STORY_JS_TEMPLATE_FILE = story_content_template.js
 JS_FILES = \
 	main.js game.js world.js game_location.js position.js \
 	hex_coord.js array_2d.js story.js story_choice.js \
-	story_paragraph.js player.js utils.js
+	story_paragraph.js player.js utils.js \
+	ink_arrays.js ink_dictionaries.js
 
 MAIN_STORY_FILE = main.ink
 STORY_FILES = $(MAIN_STORY_FILE)
