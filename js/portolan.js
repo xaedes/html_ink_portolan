@@ -9,9 +9,14 @@ function main()
 }
 function Game(storyContent) 
 {
+    this.inkArrays = new InkArrays();
+    this.inkDictionaries = new InkDictionaries();
     this.story = new Story(storyContent);
     this.world = new World();
     this.world.generate(75,200,10,10,40,15,30);
+
+    this.inkArrays.bindToInk(this.story.inkStory);
+    this.inkDictionaries.bindToInk(this.story.inkStory);
 
     this.player = new Player(this.world);
 
@@ -20,6 +25,15 @@ function Game(storyContent)
 
     this.player.position = start_island.getRandomPosition();
     this.player.inLocations = this.world.getLocationsOfPosition(this.player.position);
+
+    this.arr_current_observations = this.inkArrays.newArray();
+    this.story.inkStory.variablesState["arr_current_observations"] = this.arr_current_observations;
+    {
+        let arr = this.inkArrays.getArray(this.arr_current_observations);
+        arr.items.push(135);
+        arr.items.push(75);
+        arr.items.push(-45);
+    }
 
     this.renderer = new GameRenderer(this);
 }
@@ -254,6 +268,7 @@ function GameLocationRenderer(data)
         this.turbulence = (
             this.filter
             .append("feTurbulence")
+            // https://drafts.fxtf.org/filter-effects/#feTurbulenceElement
             .attr("type", "turbulence")
             .attr("baseFrequency", 0.05)
             .attr("numOctaves", 2)
@@ -739,4 +754,480 @@ function Utils()
     {
         return Math.floor(this.randomUniform(min, max));
     }
+}
+function InkArray(id_)
+{
+    let id = id_;
+    this.items = new Array();
+
+    let refCount = 1;
+    this.incRefCount = function() {
+        refCount++;
+        return refCount;
+    };
+    this.decRefCount = function() {
+        refCount--;
+        return refCount;
+    };
+    this.getRefCount = function() {
+        return refCount;
+    };
+    this.getId = function() {
+        return id;
+    };
+    this.copyFrom = function(inkArray) {
+        this.items = Array.from(inkArray.items);
+        return this;
+    };
+}
+function InkArrays()
+{
+    this._nextId = 1;
+    
+    // makes and returns the next array id.
+    this.nextId = function()
+    {
+        let result = this._nextId;
+        this._nextId++;
+        return "arr_" + result;
+    };
+
+
+    this.arrays = {};
+
+    // get or create an array with the given id.
+    // returns the array of type InkArray.
+    this.getArray = function(array_id)
+    {
+        if (!this.exists(array_id))
+        {
+            this.arrays[array_id] = new InkArray(array_id);
+        }
+        return this.arrays[array_id];
+    };
+
+    this.bindToInk = function(inkStory)
+    {
+        let PURE = true;
+        let ACTION = false;
+
+        inkStory.BindExternalFunction("Array_invalid",        this.invalidId.bind(this),         PURE);
+        inkStory.BindExternalFunction("Array_isInvalid",      this.isInvalidId.bind(this),       PURE);
+        inkStory.BindExternalFunction("Array_new",            this.newArray.bind(this),          ACTION);
+        inkStory.BindExternalFunction("Array_exist",          this.exists.bind(this),            PURE);
+        inkStory.BindExternalFunction("Array_copy",           this.copyArray.bind(this),         ACTION);
+        inkStory.BindExternalFunction("Array_ref",            this.referenceArray.bind(this),    ACTION);
+        inkStory.BindExternalFunction("Array_release",        this.releaseArray.bind(this),      ACTION);
+        inkStory.BindExternalFunction("Array_referenceCount", this.referencesOfArray.bind(this), PURE);
+        inkStory.BindExternalFunction("Array_get",            this.getArrayItem.bind(this),      PURE);
+        inkStory.BindExternalFunction("Array_set",            this.setArrayItem.bind(this),      ACTION);
+        inkStory.BindExternalFunction("Array_remove",         this.removeArrayItem.bind(this),   ACTION);
+        inkStory.BindExternalFunction("Array_clear",          this.clearArray.bind(this),        ACTION);
+        inkStory.BindExternalFunction("Array_size",           this.getSizeOfArray.bind(this),    PURE);
+        inkStory.BindExternalFunction("Array_find",           this.findInArray.bind(this),       PURE);
+        inkStory.BindExternalFunction("Array_pushBack",       this.pushBackArray.bind(this),     ACTION);
+        return this;
+    };
+
+// functions bindable to ink:
+
+    // returns an invalid array id.
+    this.invalidId = function()
+    {
+        return "invalid";
+    };
+
+    // returns whether the given id is valid or not.
+    this.isInvalidId = function(array_id)
+    {
+        return this.invalidId() == array_id;
+    };
+
+    // make a new empty array.
+    // returns id to the new array.
+    this.newArray = function()
+    {
+        let id = this.nextId();
+        let array = this.getArray(id);
+        return array.getId();
+    };
+
+    // returns whether the given array exists
+    this.exists = function(array_id)
+    {
+        return (array_id in this.arrays ? true : false);
+    };
+
+    // make a copy of the given array.
+    // returns id to the new array.
+    this.copyArray = function(array_id)
+    {
+        let source = this.getArray(array_id);
+        let copy_id = this.newArray();
+        this.arrays[copy_id].copyFrom(source);
+        return copy_id;
+    };
+
+    // make a reference to the given array.
+    // increases reference count to the given array.
+    // returns id to the referenced array
+    this.referenceArray = function(array_id)
+    {
+        let array = this.getArray(array_id);
+        array.incRefCount();
+        return array_id;
+    };
+
+    // release the array.
+    // decreases reference count to the array.
+    // when reference count reaches zero, the array will be released from memory.
+    // returns the remaining reference count
+    this.releaseArray = function(array_id)
+    {
+        let refCount = 0;
+        if (this.exists(array_id))
+        {
+            refCount = this.arrays[array_id].decRefCount();
+            if (refCount <= 0)
+            {
+                delete this.arrays[array_id];
+            }
+        }
+        return refCount;
+    };
+
+    // returns reference count to the array.
+    this.referencesOfArray = function(array_id)
+    {
+        let refCount = 0;
+        if (this.exists(array_id))
+        {
+            refCount = this.arrays[array_id].getRefCount();
+        }
+        return refCount;
+    };
+
+    // returns the item value for a given index from the array.
+    this.getArrayItem = function(array_id, index, default_value="")
+    {
+        if (!this.exists(array_id)) return default_value;
+        let array = this.getArray(array_id);
+        if (!(index in array.items)) return default_value;
+        return array.items[index];
+    };
+
+    // set item value in array.
+    this.setArrayItem = function(array_id, index, value)
+    {
+        let array = this.getArray(array_id);
+        array.items[index] = value;
+        return true;
+    };
+
+    // remove the item with the given index from the array.
+    // returns size of the array after removal.
+    this.removeArrayItem = function(array_id, index)
+    {
+        if (!this.exists(array_id)) return 0;
+        let array = this.getArray(array_id);
+        array.items.splice(index, 1);
+        return array.items.length;
+    };
+
+    // removes all items from the array.
+    this.clearArray = function(array_id)
+    {
+        if (!this.exists(array_id)) return;
+        let array = this.getArray(array_id);
+        array.items.length = 0;
+    };
+
+    // returns the size of the array.
+    this.getSizeOfArray = function(array_id)
+    {
+        if (!this.exists(array_id)) return 0;
+        let array = this.getArray(array_id);
+        return array.items.length;
+    };
+
+    // returns the first index where the item equals the value, or size of array if not found.
+    this.findInArray = function(array_id, value)
+    {
+        if (!this.exists(array_id)) return -1;
+        let array = this.getArray(array_id);
+        for (let i=0; i<array.items.length; ++i)
+        {
+            if(array.items[i] === value)
+            {
+                return i;
+            }
+        }
+        return array.items.length;
+    };
+
+    // appends the value to the array.
+    // returns the new size of the array.
+    this.pushBackArray = function(array_id, value)
+    {
+        let array = this.getArray(array_id);
+        let idx = array.items.length;
+        array.items.push(value);
+        return idx;
+    };
+
+}function InkDictionary(id_)
+{
+    let id = id_;
+    this.items = new Map();
+
+    this._refCount = 1;
+
+    this.incRefCount = function() {
+        this._refCount++;
+        return this._refCount;
+    };
+    this.decRefCount = function() {
+        this._refCount--;
+        return this._refCount;
+    };
+    this.getRefCount = function() {
+        return this._refCount;
+    };
+    this.getId = function() {
+        return id;
+    };
+    this.copyFrom = function(inkDictionary) {
+        this.items.clear();
+        for (const [key, value] of inkDictionary.items.entries())
+        {
+            this.items.set(key, value);
+        }
+        return this;
+    };
+
+}
+function InkDictionaries()
+{
+    this._nextId = 1;
+    
+    // makes and returns the next dictionary id.
+    this.nextId = function()
+    {
+        let result = this._nextId;
+        this._nextId++;
+        return "dct_" + result;
+    };
+
+
+    this.dictionaries = {};
+
+    // get or create an dictionary with the given id.
+    // returns the dictionary of type InkDictionary.
+    this.getDictionary = function(dict_id)
+    {
+        if (!this.exists(dict_id))
+        {
+            this.dictionaries[dict_id] = new InkDictionary(dict_id);
+        }
+        return this.dictionaries[dict_id];
+    };
+
+    this.bindToInk = function(inkStory)
+    {
+        let PURE = true;
+        let ACTION = false;
+
+        inkStory.BindExternalFunction("Dictionary_invalid",        this.invalidId.bind(this),              PURE);
+        inkStory.BindExternalFunction("Dictionary_isInvalid",      this.isInvalidId.bind(this),            PURE);
+        inkStory.BindExternalFunction("Dictionary_new",            this.newDictionary.bind(this),          ACTION);
+        inkStory.BindExternalFunction("Dictionary_exist",          this.exists.bind(this),                 PURE);
+        inkStory.BindExternalFunction("Dictionary_copy",           this.copyDictionary.bind(this),         ACTION);
+        inkStory.BindExternalFunction("Dictionary_ref",            this.referenceDictionary.bind(this),    ACTION);
+        inkStory.BindExternalFunction("Dictionary_release",        this.releaseDictionary.bind(this),      ACTION);
+        inkStory.BindExternalFunction("Dictionary_referenceCount", this.referencesOfDictionary.bind(this), PURE);
+        inkStory.BindExternalFunction("Dictionary_getKey",         this.getDictionaryKey.bind(this),       PURE);
+        inkStory.BindExternalFunction("Dictionary_has",            this.hasDictionaryItem.bind(this),      PURE);
+        inkStory.BindExternalFunction("Dictionary_get",            this.getDictionaryItem.bind(this),      PURE);
+        inkStory.BindExternalFunction("Dictionary_set",            this.setDictionaryItem.bind(this),      ACTION);
+        inkStory.BindExternalFunction("Dictionary_remove",         this.removeDictionaryItem.bind(this),   ACTION);
+        inkStory.BindExternalFunction("Dictionary_clear",          this.clearDictionary.bind(this),        ACTION);
+        inkStory.BindExternalFunction("Dictionary_size",           this.getSizeOfDictionary.bind(this),    PURE);
+        inkStory.BindExternalFunction("Dictionary_find",           this.findInDictionary.bind(this),       PURE);
+        inkStory.BindExternalFunction("Dictionary_inverse",        this.inverseOfDictionary.bind(this),    ACTION);
+        return this;
+    };
+
+// functions bindable to ink:
+
+    // returns an invalid dictionary id.
+    this.invalidId = function()
+    {
+        return "invalid";
+    };
+
+    // returns whether the given id is valid or not.
+    this.isInvalidId = function(dict_id)
+    {
+        return this.invalidId() == dict_id;
+    };
+
+    // make a new empty dictionary.
+    // returns id to the new dictionary.
+    this.newDictionary = function()
+    {
+        let id = this.nextId();
+        let dict = this.getDictionary(id);
+        return dict.getId();
+    };
+
+    // returns whether the given dictionary exists
+    this.exists = function(dict_id)
+    {
+        return (dict_id in this.dictionaries ? true : false);
+    };
+
+    // make a copy of the given dictionary.
+    // returns id to the new dictionary.
+    this.copyDictionary = function(dict_id)
+    {
+        let source = this.getDictionary(dict_id);
+        let copy_id = this.newDictionary();
+        this.dictionaries[copy_id].copyFrom(source);
+        return copy_id;
+    };
+
+    // make a reference to the given dictionary.
+    // increases reference count to the given dictionary.
+    // returns id to the referenced dictionary
+    this.referenceDictionary = function(dict_id)
+    {
+        let dict = this.getDictionary(dict_id);
+        dict.incRefCount();
+        return dict_id;
+    };
+
+    // release the dictionary.
+    // decreases reference count to the dictionary.
+    // when reference count reaches zero, the dictionary will be released from memory.
+    // returns the remaining reference count
+    this.releaseDictionary = function(dict_id)
+    {
+        let refCount = 0;
+        if (this.exists(dict_id))
+        {
+            refCount = this.dictionaries[dict_id].decRefCount();
+            if (refCount <= 0)
+            {
+                delete this.dictionaries[dict_id];
+            }
+        }
+        return refCount;
+    };
+
+    // returns reference count to the dictionary.
+    this.referencesOfDictionary = function(dict_id)
+    {
+        let refCount = 0;
+        if (this.exists(dict_id))
+        {
+            refCount = this.dictionaries[dict_id].getRefCount();
+        }
+        return refCount;
+    };
+
+    // returns a key from the list of dictionary keys.
+    this.getDictionaryKey = function(dict_id, index, default_value="")
+    {
+        if (!this.exists(dict_id)) return default_value;
+        let dict = this.getDictionary(dict_id);
+        if (index >= dict.items.size) return default_value;
+        let entries = Array.from(dict.items.entries());
+        let key = entries[index][0];
+        return key;
+    };
+
+    // returns the item value for a given key from the dictionary.
+    this.hasDictionaryItem = function(dict_id, key)
+    {
+        if (!this.exists(dict_id)) return false;
+        let dict = this.getDictionary(dict_id);
+        return dict.items.has(key);
+    };
+
+    // returns the item value for a given key from the dictionary.
+    this.getDictionaryItem = function(dict_id, key, default_value="")
+    {
+        if (!this.exists(dict_id)) return default_value;
+        let dict = this.getDictionary(dict_id);
+        if (!dict.items.has(key)) return default_value;
+        return dict.items.get(key);
+    };
+
+    // set item value in dictionary.
+    this.setDictionaryItem = function(dict_id, key, value)
+    {
+        let dict = this.getDictionary(dict_id);
+        dict.items.set(key, value);
+        return true;
+    };
+
+    // remove the item with the given key from the dictionary. 
+    // returns size of the dictionary after removal.
+    this.removeDictionaryItem = function(dict_id, key)
+    {
+        if (!this.exists(dict_id)) return;
+        let dict = this.getDictionary(dict_id);
+        dict.items.delete(key);
+        return dict.items.size;
+    };
+
+    // removes all items from the dictionary.
+    this.clearDictionary = function(dict_id)
+    {
+        if (!this.exists(dict_id)) return;
+        let dict = this.getDictionary(dict_id);
+        dict.items.clear();
+    };
+
+    // returns the size of the dictionary.
+    this.getSizeOfDictionary = function(dict_id)
+    {
+        if (!this.exists(dict_id)) return 0;
+        let dict = this.getDictionary(dict_id);
+        return dict.items.size;
+    };
+
+    // returns the first key where the item equals the value, or notfound.
+    this.findInDictionary = function(dict_id, find_value, notfound)
+    {
+        if (!this.exists(dict_id)) return notfound;
+        let dict = this.getDictionary(dict_id);
+        for (const [key, value] of dict.items.entries())
+        {
+            if(value === find_value)
+            {
+                return key;
+            }
+        }
+        return notfound;
+    };
+
+    // returns inverse dictionary with values as keys and keys as values.
+    // the new entries are inserted in the same order as the original dictionary,
+    // possibly overwriting duplicate keys.
+    this.inverseOfDictionary = function(dict_id)
+    {
+        let new_id = this.newDictionary();
+        if (this.exists(dict_id))
+        {
+            let new_dict = this.getDictionary(new_id);
+            let dict = this.getDictionary(dict_id);
+            for (const [key, value] of dict.items.entries())
+            {
+                new_dict.items.set(value, key);
+            }
+        }
+        return new_id;
+    }
+
 }
