@@ -1,6 +1,8 @@
 INCLUDE common_functions.ink
 INCLUDE external_functions.ink
 
+VAR arr_current_observations = -1
+
 //-> GameLoop
 -> Prolog
 
@@ -49,11 +51,22 @@ On your way to the destination nothing particularly interesting happened.
 
 === Island(->goback) ===
 
-~ temp bearing = RANDOM(0,359)
+// ~ temp bearing = RANDOM(0,359)
 
-An island.
-You see another island at {print_num(bearing)} degree.
+After landing you explore the island and finally look for other visible islands in the surrounding ocean. 
 
--> goback
+->list_observations(goback, 0)
 
+= list_observations(->goback, idx)
+~ temp invalid = Array_isInvalid(arr_current_observations)
+{invalid:->done(goback)}
+~ temp size = Array_size(arr_current_observations)
+{idx>=size:->done(goback)}
+~ temp bearing = Array_get(arr_current_observations, idx)
+You see another {island|isle} at {print_num(bearing)} degree.
+
+->list_observations(goback, idx+1)
+
+= done(->goback)
+->goback
 
