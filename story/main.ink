@@ -1,4 +1,4 @@
-INCLUDE functions.ink
+INCLUDE common_functions.ink
 INCLUDE external_functions.ink
 
 //-> GameLoop

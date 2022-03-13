@@ -1,4 +1,5 @@
 
+
 === function print_int(x) ===
 {
 - x >= 1000:
@@ -49,10 +50,13 @@
   }
 }
 === function print_num(x) ===
-~ temp integral_part = INT(x)
-~ temp fractional_part = x-integral_part
-~ temp is_half = abs(x - 0.5) < 0.1
+~ temp is_neg = x < 0
+~ temp magnitude = abs(x)
+~ temp integral_part = INT(magnitude)
+~ temp fractional_part = magnitude-integral_part
+~ temp is_half = abs(magnitude - 0.5) < 0.1
 ~ temp and_half = abs(fractional_part - 0.5) < 0.1
+{is_neg:minus }<>
 {
 - is_half: half a
 - else: {print_int(integral_part)}{and_half: and a half}
@@ -75,4 +79,5 @@
 - else:  ~ result = x
 }
 ~ return result
+
 
